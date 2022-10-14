@@ -1,5 +1,5 @@
 #include<vector>
-#include<functional>
+#include<algorithm>
 #include<numeric>
 #include<string>
 #include<iostream>
@@ -19,18 +19,15 @@ void random_permutation_test(std::vector<std::vector<double> >& original_sample,
   std::vector<double> statistics_for_input;
   std::transform(original_sample.begin(), original_sample.end(), std::back_inserter(statistics_for_input), stat);
   std::cout << "Original Sample Group Statistic: " << statistics_for_input << "\n";
-
   std::vector<double> mergedpool;
   for (auto const &v: original_sample) {
     mergedpool.insert(mergedpool.end(), v.begin(), v.end());
   }
   std::cout << "Merged pool to pick random samples from: " << mergedpool << "\n";
-
   for (int i = 0; i < iterations; i++) {
     auto mergedpoolmutable = mergedpool;
     std::cout << "Random Pool " << i << " statistic: ";
     std::vector<double> stats_for_pool;
-    
     for (auto const &vec: original_sample) {
       std::vector<double> group(vec.size(), 0);
       for (int j = 0; j < vec.size(); j++) {
@@ -40,7 +37,6 @@ void random_permutation_test(std::vector<std::vector<double> >& original_sample,
       }
       stats_for_pool.push_back(stat(group));
     }
-
     std::cout << stats_for_pool << "\n";
   }
 }
