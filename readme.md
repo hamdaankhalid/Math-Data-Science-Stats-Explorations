@@ -1,5 +1,6 @@
 # Just fun math experiments!
 
-- Random Number generator algorithm DONE
-- Approximating Pi DONE
-- Random Permutation Testing DONE
+- Random Number generator algorithm 
+- Approximating Pi 
+- Random Permutation Testing 
+- Matrix Multiplication (Brute Force & Strassens)
