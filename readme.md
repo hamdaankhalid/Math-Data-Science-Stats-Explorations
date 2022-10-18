@@ -4,3 +4,5 @@
 - Approximating Pi 
 - Random Permutation Testing 
 - Matrix Multiplication (Brute Force & Strassens)
+- Multi Armed Bandit Algorithm
+  
