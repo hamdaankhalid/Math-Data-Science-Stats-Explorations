@@ -137,19 +137,23 @@ int main() {
   auto egb = EpsilonGreedyBandit(epsilon, sample_group_identifiers);
 
   std::cout << "Interactively see how Epsilon greedy multi armed bandits use explore-exploit \n";
-  std::cout << "Enter -1 as the time on webpage to exit repl \n";
+  std::cout << "Enter -1 as the time on webpage to exit repl \n \n";
   // loop where a user gets a sample group signifying the image shown on the loading screen
   // and then enters the hypothetical seconds or milliseconds each page was stared at.
   double exit = -1;
   double user_input = 0;
+  
   while (user_input != exit) {
+    egb.report();
     auto sample_group = egb.getArm();
     std::cout << "Bandit selected " << sample_group << " ! \n";
     std::cout << "How many seconds did the user spend on the page? \n";
     std::cin >> user_input;
     if (user_input == exit) break;
     egb.add_arm_observation(sample_group, user_input);
-    egb.report();
+    
+    // clear screen
+    std::cout << "\033[2J\033[H";
   }
   return 0;
 };
