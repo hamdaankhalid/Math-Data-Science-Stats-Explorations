@@ -1,3 +1,6 @@
+#include <boost/math/distributions.hpp> 
+
+#include<functional>
 #include <set>
 #include <algorithm>
 #include <vector>
@@ -6,6 +9,10 @@
 #include <stdexcept>
 #include <iostream>
 
+void clear_screen() {
+  // clear screen
+  std::cout << "\033[2J\033[H";
+}
 /**
  * Epsilon Greedy Based Bandit Algorithm
  * Epsilon is between 0 - 1
@@ -49,7 +56,7 @@ class EpsilonGreedyBandit {
   double epsilon;
   std::vector<BanditArm> arm_records;
   public:
-    EpsilonGreedyBandit(double e, std::vector<std::string> arm_ids) {
+    EpsilonGreedyBandit(double e, std::vector<std::string>& arm_ids) {
       if (e < 0 || e > 1) {
         throw std::invalid_argument("Epsilong must be in range [0, 1]");
       }
@@ -129,7 +136,7 @@ class EpsilonGreedyBandit {
  * The Driver program will run a simluation where we are testing the web page stickiness
  * based on what images we show our users everytime they open our landing screen.
  * */
-int main() {
+void epsilon_greedy_sim() {
   // N groups that will be the arms of the bandit
   std::vector<std::string> sample_group_identifiers{ "dog images", "cat images", "horse images", "goat images" };
   // this decides our explore to exploit ratio
@@ -152,8 +159,108 @@ int main() {
     if (user_input == exit) break;
     egb.add_arm_observation(sample_group, user_input);
     
-    // clear screen
-    std::cout << "\033[2J\033[H";
+    clear_screen();
   }
-  return 0;
 };
+
+class ThompsonSamplingArm {
+  double alpha = 10; // # of rewards
+  double beta = 10; // # of non rewards
+
+  public:
+  std::string identifier;
+
+  ThompsonSamplingArm(std::string id): identifier(id) {}
+
+  void mutate_beta_distrib(int offset) {
+    if (offset == 1) alpha++;
+    else beta-=offset;
+  }
+
+  double get_rand_beta_distrib() {
+    double rand_unif = (double) rand()/RAND_MAX;
+    boost::math::beta_distribution<> dist(alpha, beta); 
+    double rand_beta = boost::math::quantile(dist, rand_unif);
+    std::cout << "Variant " << identifier << " simulated " << std::to_string(rand_beta) << std::endl;
+    return rand_beta;
+  }
+};
+
+class ThompsonSamplingBandit {
+  static constexpr double training_cutoff = 0.95;
+  int total_iterations = 0;
+
+  std::vector<ThompsonSamplingArm> arm_records;
+  std::function<int(int)> reward_func;
+  
+  public:
+  ThompsonSamplingBandit(std::vector<std::string>& arm_ids, std::function<int(int)> rf): reward_func(rf) {
+    std::set<std::string> seen_before;
+    for (auto arm_id : arm_ids) {
+      if (seen_before.find(arm_id) != seen_before.end()) {
+        throw std::invalid_argument("Arm identifiers must be unique.");
+      }
+      ThompsonSamplingArm tsa(arm_id);
+      arm_records.push_back(tsa);
+    }
+  }
+
+  /**
+   *  go through the vector of arms and get use their alpha and 
+   * beta to get a random number from beta distribution choose
+   * the arm with max beta distribution.
+   * */
+  std::string getArm() {
+    double max_rand_beta = -1;
+    std::string max_beta_arm = "";
+    for (auto arm: arm_records) {
+      double rand_from_beta_distribution = arm.get_rand_beta_distrib();
+      if (max_rand_beta < rand_from_beta_distribution) {
+        max_rand_beta = rand_from_beta_distribution;
+        max_beta_arm = arm.identifier;
+      }
+    }
+    return max_beta_arm;
+  }
+
+  void addObservation(std::string arm_id, int observation) {
+    auto arm_iter = std::find_if(arm_records.begin(), arm_records.end(), [&arm_id](ThompsonSamplingArm a) -> bool { return a.identifier == arm_id; });
+    if (arm_iter == arm_records.end()) {
+      return;
+    }
+    int translate_observation_reward = reward_func(observation);
+    arm_iter->mutate_beta_distrib(translate_observation_reward);
+    total_iterations++;
+  }
+};
+
+/**
+ * Driver program for simulating variant testing with thompson model based inference.
+ * We will simulate an environment where we are using n-variants of a button and capturing
+ * the click through rate. User's can decide click or not click per iteration. Upon reaching
+ * our testing end case. Our AI agent will exit training.
+ * */
+void thompson_sampling_sim() {
+  std::vector<std::string> variant_groups{"red button", "yellow button", "green button"};
+  std::function<int(int)> dummy_reward_func = [](int inp) -> int { return inp; };
+  ThompsonSamplingBandit tsb(variant_groups, dummy_reward_func);
+
+  double user_inp = 0;
+  double exit = -69;
+  std::cout << "Enter " << exit << " to exit repl \n";
+  while(user_inp != exit) {
+    auto selected_arm = tsb.getArm();
+    std::cout << "\n Variant picked by Bandit: " << selected_arm << "\n\n";
+    std::cout << "Enter 1 to simulate a conversion and -1 otherwise \n";
+    std::cin >> user_inp;
+    if (user_inp == exit) return;
+    tsb.addObservation(selected_arm, user_inp);
+    clear_screen();
+  }
+}
+
+int main() {
+  // epsilon_greedy_sim();
+  thompson_sampling_sim();
+  return 0;
+}
