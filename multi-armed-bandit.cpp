@@ -163,6 +163,15 @@ void epsilon_greedy_sim() {
   }
 };
 
+
+/**
+ * Thompson sampling based multi arm bandit. In this reinforcement learning algorithm we
+ * use the beta distribution and it's alpha and beta as reward and punishment to skew the
+ * random number by leveraging the beta distribution to produce higher random number possibilities
+ * for those variants that are outperforming or underperforming the others. As the iterations
+ * the number of exploration will decrease in contrast to exploiting the already well known, and eventually
+ * we can call the dominant variant the winner.
+ * */
 class ThompsonSamplingArm {
   double alpha = 10; // # of rewards
   double beta = 10; // # of non rewards
