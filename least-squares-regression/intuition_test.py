@@ -6,11 +6,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 def centroid_calc(arr_x, arr_y):
   return (np.sum(arr_x)/len(arr_x), np.sum(arr_y)/len(arr_y))
 
-def linear_regr_visual_test():
-  # Load dataset
-  x = np.array([2,3,5,7,12,13]).reshape(-1, 1)
-  y = np.array([4,6,9,11,15,17]).reshape(-1, 1)
-
+def linear_regr_visual_test(x, y):
   # Create linear regression object
   regr = linear_model.LinearRegression()
 
@@ -38,12 +34,20 @@ def linear_regr_visual_test():
   print(f"TEST HYPOTHESIS: centroid always lies on the line: Expect {expected} : Returned {returned}")
 
   # Plot outputs
-  plt.scatter(x, y, color="black")
-  plt.plot(x, pred, color="blue", linewidth=3)
+  # plt.scatter(x, y, color="black")
+  # plt.plot(x, pred, color="blue", linewidth=3)
 
-  plt.xticks(())
-  plt.yticks(())
+  # plt.xticks(())
+  # plt.yticks(())
 
-  plt.show()
+  # plt.show()
 
-linear_regr_visual_test()
+x1 = np.array([2,3,5,7,12,13]).reshape(-1, 1)
+y1 = np.array([4,6,9,11,15,17]).reshape(-1, 1)
+linear_regr_visual_test(x1, y1)
+
+print("################")
+
+x2 = np.array([2,3,5,7,12,13]).reshape(-1, 1)
+y2 = np.array([17,15,11,9,6,4]).reshape(-1, 1)
+linear_regr_visual_test(x2, y2)

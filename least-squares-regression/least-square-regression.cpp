@@ -67,7 +67,7 @@ class RegressionLine {
   void fit(const std::vector<Point>& points, double accuracy_step = 0.0000001) {
     fulcrum = calc_centroid(points);
     intercept = fulcrum.y;
-    
+
     // binary search till convergence based on accuracy step or till equilibrium point is reached!
     double max_theta = 180;
     double min_theta = 0;
@@ -113,10 +113,10 @@ class RegressionLine {
 #define ASSERT_EQUAL(expected, real) { \
   std::cout << "######## TEST START ######### \n"; \
   if (expected == real) { \
-    std::cout << "EXPECTED "<< expected << "==" << " REAL " << real  << " PASSED\n"; \
+    std::cout << "EXPECTED "<< expected << " AND " << " GOT " << real  << " PASSED\n"; \
   } \
   else { \
-    std::cout << "EXPECTED "<< expected << " != " << " REAL " << real << " FAILED\n"; \
+    std::cout << "EXPECTED "<< expected << " BUT" << " GOT " << real << " FAILED\n"; \
   } \
   std::cout << "######## TEST END ######### \n"; \
 }
@@ -136,9 +136,13 @@ namespace TESTING {
   }
 
   void run_tests() {
-    std::vector<double> x{2,3,5,7,12,13};
-    std::vector<double> y{4,6,9,11,15,17};
-    _fitting_works(x, y, 1.0849, 2.7389);
+    std::vector<double> x1{2,3,5,7,12,13};
+    std::vector<double> y1{4,6,9,11,15,17};
+    _fitting_works(x1, y1, 1.0849, 2.7389);
+
+    std::vector<double> x2{2,3,5,7,12,13};
+    std::vector<double> y2{17,15,11,9,6,4};
+    _fitting_works(x2, y2, -1.066, 17.795);
   }
 }
 
