@@ -4,6 +4,10 @@
 #include <numeric>
 #include <vector>
 
+
+// Solving Simple linear regression best line fit as a physics problem!
+
+
 class Point {
   public:
   double x;
@@ -16,7 +20,6 @@ class Point {
   }
 };
 
-// Simple linear regression best line fit as a physics problem
 Point calc_centroid(const std::vector<Point>& points) {
   int n = points.size();
   double summation_x = std::accumulate(points.begin(), points.end(), 0, [&](double sum, const Point& curr) {return sum+curr.x; });
@@ -26,9 +29,10 @@ Point calc_centroid(const std::vector<Point>& points) {
 
 class RegressionLine {
   Point fulcrum;
+  double theta; // angle that a point on the scatter plot makes in contact with this line
+
   double intercept = 0;
   double regression_coefficient = 0;
-  double theta = 90; // angle b/w line and y axis
 
   double _cot(double x) {
     return cos(x)/sin(x);
@@ -39,8 +43,8 @@ class RegressionLine {
   }
 
   /**
-   * We mess around with the line by mutating theta member between 180 && -180 
-   * -ve_y is represented as -180 deg and +ve_y is represented as 180 deg
+   * We mess around with the line by mutating theta member between 180 && 0 
+   * -ve_y is represented as 0-90 deg and +ve_y is represented as 90-180 deg
    * */
   void _adjust_theta(double new_theta) {
     theta = new_theta;
@@ -67,8 +71,7 @@ class RegressionLine {
   void fit(const std::vector<Point>& points, double accuracy_step = 0.0000001) {
     fulcrum = calc_centroid(points);
     intercept = fulcrum.y;
-
-    // binary search till convergence based on accuracy step or till equilibrium point is reached!
+    // Binary search till convergence based on accuracy step or till equilibrium point is reached!
     double max_theta = 180;
     double min_theta = 0;
     while (min_theta < max_theta) {
@@ -81,13 +84,10 @@ class RegressionLine {
         return _torque_accumulator(sum, curr, false);
       });
       double net_torque = right_torque - left_torque;
-      
       // reached torque equilibrium!!!
       if (net_torque == 0) {
         return;
-      }
-
-      if (net_torque > 0) {
+      } else if (net_torque > 0) {
         max_theta = mid_theta+accuracy_step;
       } else {
         min_theta = mid_theta-accuracy_step;
