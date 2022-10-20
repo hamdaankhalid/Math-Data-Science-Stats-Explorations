@@ -22,6 +22,10 @@ def linear_regr_visual_test():
 
   # The coefficients
   print("Coefficients: \n", regr.coef_)
+
+  # Intercept
+  print("Intercept: \n", regr.intercept_)
+
   # The mean squared error
   print("Mean squared error: %.2f" % mean_squared_error(y, pred))
   # The coefficient of determination: 1 is perfect prediction
@@ -31,9 +35,8 @@ def linear_regr_visual_test():
   expected = centroid[1]
   print(f"Centroid cooridinates: {centroid}")
   returned = regr.predict(np.array(centroid[0]).reshape(1, -1))
-  print(f"TEST: centroid always lies on the line: Expect {expected} : Returned {returned}")
+  print(f"TEST HYPOTHESIS: centroid always lies on the line: Expect {expected} : Returned {returned}")
 
-  print(x, y)
   # Plot outputs
   plt.scatter(x, y, color="black")
   plt.plot(x, pred, color="blue", linewidth=3)

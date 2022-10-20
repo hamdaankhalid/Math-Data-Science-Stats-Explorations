@@ -39,11 +39,11 @@ class RegressionLine {
   }
 
   /**
-   * We mess around with the line by mutating theta between 180 && -180 
-   * -ve_y = -180 deg and +ve_y = 180 deg
+   * We mess around with the line by mutating theta member between 180 && -180 
+   * -ve_y is represented as -180 deg and +ve_y is represented as 180 deg
    * */
-  void _adjust_theta(double theta_offset) {
-    theta += theta_offset;
+  void _adjust_theta(double new_theta) {
+    theta = new_theta;
     // now adjust the line intercept and regression_coefficient wrt to new theta
     // when we adjust theta what will be our new slope and intercept?
     regression_coefficient = _cot(theta);
@@ -64,17 +64,16 @@ class RegressionLine {
 
   public:
   
-  void fit(const std::vector<Point>& points, double accuracy_step = 1) {
+  void fit(const std::vector<Point>& points, double accuracy_step = 0.0000001) {
     fulcrum = calc_centroid(points);
     intercept = fulcrum.y;
-
-    // binary search for till convergence or equilibrium point
+    
+    // binary search till convergence based on accuracy step or till equilibrium point is reached!
     double max_theta = 180;
-    double min_theta = -180;
+    double min_theta = 0;
     while (min_theta < max_theta) {
       double mid_theta  = (min_theta + max_theta)/2;
       _adjust_theta(mid_theta);
-      
       double left_torque = std::accumulate(points.begin(), points.end(), 0, [&](double sum, const Point& curr) {
         return _torque_accumulator(sum, curr, true);
       });
@@ -83,13 +82,13 @@ class RegressionLine {
       });
       double net_torque = right_torque - left_torque;
       
-      // reached equilibrium!!!
+      // reached torque equilibrium!!!
       if (net_torque == 0) {
         return;
       }
 
-      if (net_torque < 0) {
-        min_theta = mid_theta+accuracy_step;
+      if (net_torque > 0) {
+        max_theta = mid_theta+accuracy_step;
       } else {
         min_theta = mid_theta-accuracy_step;
       }
@@ -109,21 +108,42 @@ class RegressionLine {
   }
 };
 
-int main() {
-  std::vector<double> x{2,3,5,7,12,13};
-  std::vector<double> y{4,6,9,11,15,17};
-  std::vector<Point> points;
-  for(int i = 0; i < x.size(); i++) {
-    Point p(x.at(i), y.at(i));
-    points.push_back(p);
+// NOTE: Yes I wrote my own testing..... Why? I wanted to... 
+
+#define ASSERT_EQUAL(expected, real) { \
+  std::cout << "######## TEST START ######### \n"; \
+  if (expected == real) { \
+    std::cout << "EXPECTED "<< expected << "==" << " REAL " << real  << " PASSED\n"; \
+  } \
+  else { \
+    std::cout << "EXPECTED "<< expected << " != " << " REAL " << real << " FAILED\n"; \
+  } \
+  std::cout << "######## TEST END ######### \n"; \
+}
+
+namespace TESTING {
+  void _fitting_works(std::vector<double> x, std::vector<double> y, double expected_regression_coeffient, double expected_intercept) {
+    std::vector<Point> points;
+    for(int i = 0; i < x.size(); i++) {
+      Point p(x.at(i), y.at(i));
+      points.push_back(p);
+    }
+
+    RegressionLine rl;
+    rl.fit(points);
+    ASSERT_EQUAL(expected_intercept, rl.get_intercept());
+    ASSERT_EQUAL(expected_regression_coeffient, rl.get_regression_coefficient());
   }
 
-  RegressionLine rl;
-  rl.fit(points);
+  void run_tests() {
+    std::vector<double> x{2,3,5,7,12,13};
+    std::vector<double> y{4,6,9,11,15,17};
+    _fitting_works(x, y, 1.0849, 2.7389);
+  }
+}
 
-  std::cout << "Trained Linear Regression Model \n";
-  std::cout << "Regression Coefficient: " << rl.get_regression_coefficient() << "\n";
-  std::cout << "Intercept: " << rl.get_intercept() << "\n";
+int main() {
+  TESTING::run_tests();
 
   return 0;
 }
