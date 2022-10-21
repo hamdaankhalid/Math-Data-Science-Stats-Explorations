@@ -109,7 +109,6 @@ class RegressionLine {
 };
 
 // NOTE: Yes I wrote my own testing..... Why? I wanted to... 
-
 #define ASSERT_EQUAL(expected, real) { \
   std::cout << "######## TEST START ######### \n"; \
   if (expected == real) { \
