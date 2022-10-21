@@ -74,7 +74,7 @@ class RegressionLine {
     // Binary search till convergence based on accuracy step or till equilibrium point is reached!
     double max_theta = 180;
     double min_theta = 0;
-    while (min_theta < max_theta) {
+    while (min_theta <= max_theta) {
       double mid_theta  = (min_theta + max_theta)/2;
       _adjust_theta(mid_theta);
       double left_torque = std::accumulate(points.begin(), points.end(), 0, [&](double sum, const Point& curr) {
