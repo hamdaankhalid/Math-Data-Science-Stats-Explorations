@@ -68,7 +68,7 @@ class RegressionLine {
 
   public:
   
-  void fit(const std::vector<Point>& points, double accuracy_step = 0.0000001) {
+  void fit(const std::vector<Point>& points, double accuracy_step = 0.000000001) {
     fulcrum = calc_centroid(points);
     intercept = fulcrum.y;
     // Binary search till convergence based on accuracy step or till equilibrium point is reached!
@@ -109,13 +109,13 @@ class RegressionLine {
 };
 
 // NOTE: Yes I wrote my own testing..... Why? I wanted to... 
-#define ASSERT_EQUAL(expected, real) { \
+#define ASSERT_APPROX_EQUAL(expected, real, error) { \
   std::cout << "######## TEST START ######### \n"; \
-  if (expected == real) { \
-    std::cout << "EXPECTED "<< expected << " AND " << " GOT " << real  << " PASSED\n"; \
+  if (fabs(real-expected) <= error) { \
+    std::cout << "ACCEPTABLE ERROR " << error << " EXPECTED "<< expected << " AND " << " GOT " << real  << " PASSED\n"; \
   } \
   else { \
-    std::cout << "EXPECTED "<< expected << " BUT" << " GOT " << real << " FAILED\n"; \
+    std::cout << "ACCEPTABLE ERROR " << error << " EXPECTED "<< expected << " BUT" << " GOT " << real << " FAILED\n"; \
   } \
   std::cout << "######## TEST END ######### \n"; \
 }
@@ -130,8 +130,8 @@ namespace TESTING {
 
     RegressionLine rl;
     rl.fit(points);
-    ASSERT_EQUAL(expected_intercept, rl.get_intercept());
-    ASSERT_EQUAL(expected_regression_coeffient, rl.get_regression_coefficient());
+    ASSERT_APPROX_EQUAL(expected_intercept, rl.get_intercept(), 0.08);
+    ASSERT_APPROX_EQUAL(expected_regression_coeffient, rl.get_regression_coefficient(), 0.08);
   }
 
   void run_tests() {
