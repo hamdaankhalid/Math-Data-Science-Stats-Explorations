@@ -142,6 +142,10 @@ namespace TESTING {
     std::vector<double> x2{2,3,5,7,12,13};
     std::vector<double> y2{17,15,11,9,6,4};
     _fitting_works(x2, y2, -1.066, 17.795);
+
+    std::vector<double> x3{4,5,2,8,3,1};
+    std::vector<double> y3{7,4,6,8,1,2};
+    _fitting_works(x3, y3, 0.7027027, 1.97297297);
   }
 }
 

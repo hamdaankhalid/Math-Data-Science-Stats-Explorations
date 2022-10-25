@@ -51,3 +51,9 @@ print("################")
 x2 = np.array([2,3,5,7,12,13]).reshape(-1, 1)
 y2 = np.array([17,15,11,9,6,4]).reshape(-1, 1)
 linear_regr_visual_test(x2, y2)
+
+print("################")
+
+x2 = np.array([4,5,2,8,3,1]).reshape(-1, 1)
+y2 = np.array([7,4,6,8,1,2]).reshape(-1, 1)
+linear_regr_visual_test(x2, y2)
