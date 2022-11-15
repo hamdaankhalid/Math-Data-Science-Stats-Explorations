@@ -5,20 +5,6 @@
 #include <iostream>
 #include <set>
 
-bool operator==(const std::vector<bool>& lhs, const std::vector<bool>& rhs)
-{
-    if (lhs.size() != rhs.size()) {
-        return false;
-    }
-
-    for (int i = 0; i < lhs.size(); i++) {
-        if (lhs.at(i) != rhs.at(i)) {
-          return false;
-        }
-    }
-    return true;
-}
-
 
 struct Record
 {
@@ -31,22 +17,6 @@ class Classifier {
   virtual  std::unordered_map<std::string, double> Classify(const std::vector<bool>& queryRec) = 0;
 };
 
-// class NaiveBayesClassification : public Classifier {
-//   public:
-
-//   NaiveBayesClassification(const std::vector<Record>& _records): records(_records) {}
-
-//   /**
-//    * Conditional probability based classification
-//    * */
-//   std::unordered_map<std::string, double> Classify(const std::vector<bool>& queryRec) {
-
-//   }
-
-//   private:
-
-//   std::vector<Record> records;
-// };
 
 class ExactBayesClassification : public Classifier {
   public:
@@ -92,6 +62,22 @@ class ExactBayesClassification : public Classifier {
   private:
   std::set<std::string> classes;
   std::unordered_map< std::vector<bool>, std::vector<std::string>> matchLookup;
+};
+
+
+class NaiveBayesClassification : public Classifier {
+  public:
+
+  void Train(const std::vector<Record>& _records) {
+
+  }
+  
+  std::unordered_map<std::string, double> Classify(const std::vector<bool>& queryRec) {
+
+  }
+
+  private:
+
 };
 
 
