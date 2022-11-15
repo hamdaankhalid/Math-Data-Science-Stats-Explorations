@@ -3,6 +3,22 @@
 #include <unordered_map>
 #include <stdexcept>
 #include <iostream>
+#include <set>
+
+bool operator==(const std::vector<bool>& lhs, const std::vector<bool>& rhs)
+{
+    if (lhs.size() != rhs.size()) {
+        return false;
+    }
+
+    for (int i = 0; i < lhs.size(); i++) {
+        if (lhs.at(i) != rhs.at(i)) {
+          return false;
+        }
+    }
+    return true;
+}
+
 
 struct Record
 {
@@ -10,56 +26,74 @@ struct Record
   std::vector<bool> categoricalVariables;
 };
 
+class Classifier {
+  virtual void Train(const std::vector<Record>& _records) = 0;
+  virtual  std::unordered_map<std::string, double> Classify(const std::vector<bool>& queryRec) = 0;
+};
 
-class ExactBayesClassification {
+// class NaiveBayesClassification : public Classifier {
+//   public:
+
+//   NaiveBayesClassification(const std::vector<Record>& _records): records(_records) {}
+
+//   /**
+//    * Conditional probability based classification
+//    * */
+//   std::unordered_map<std::string, double> Classify(const std::vector<bool>& queryRec) {
+
+//   }
+
+//   private:
+
+//   std::vector<Record> records;
+// };
+
+class ExactBayesClassification : public Classifier {
   public:
-  
-  ExactBayesClassification(const std::vector<Record>& _records): records(_records)  {}
+
+  void Train(const std::vector<Record>& _records) {
+    for (auto const& record: _records) {
+      classes.insert(record.classification);
+      if (matchLookup.find(record.categoricalVariables) == matchLookup.end()) {
+        matchLookup[record.categoricalVariables] = {};
+      }
+      matchLookup[record.categoricalVariables].push_back(record.classification);
+    }
+  }
 
   std::unordered_map<std::string, double> Classify(const std::vector<bool>& queryRec) {
-    // P(queryRec is class A) = Number of all class A records that match queryRec / Total number of class A records
-    // a data structure that can store keep a track of key with max value while giving constant time 
-    // key (class) - (value) mapping
-    int totalMatches = 0;
-    std::unordered_map<std::string, int> occurenceClasses;
-    for (auto const& rec : records) {
-      if (occurenceClasses.find(rec.classification) == occurenceClasses.end()) {
-        occurenceClasses[rec.classification] = 0;
-      }
-
-      if (isExactMatch(queryRec, rec)) {
-        occurenceClasses[rec.classification]++;
-        totalMatches++;
-      }
+    if (matchLookup.find(queryRec) == matchLookup.end()) {
+      return {};
     }
 
-    std::unordered_map<std::string, double> res;
-    // normalize our records before returning
-    for (auto it : occurenceClasses) {
-      double prob = (double) it.second / totalMatches;
-      res[it.first] = prob;
+    std::unordered_map<std::string, double> intermediate;
+    auto queryExactMatches = matchLookup.at(queryRec);
+    for (auto const& match : queryExactMatches) {
+      if (intermediate.find(match) == intermediate.end()) {
+        intermediate[match] = 0;
+      }
+      intermediate[match]++;
     }
 
-    return res;
+    std::unordered_map<std::string, double> result;
+
+    for (auto classification : classes) {
+      result[classification] = 0;
+    }
+
+    double numMatches = (double) queryExactMatches.size();
+    for (auto it : intermediate) {
+      result[it.first] = it.second / numMatches;
+    }
+
+    return result;
   }
 
   private:
-
-  std::vector<Record> records;
-
-  bool isExactMatch(const std::vector<bool>& query, const Record& candidate) {
-    if (candidate.categoricalVariables.size() != query.size()) {
-        throw std::invalid_argument("query should be of same size as categorical variables in records");
-    }
-
-    for (int i = 0; i < query.size(); i++) {
-        if (query.at(i) != candidate.categoricalVariables.at(i)) {
-          return false;
-        }
-    }
-    return true;
-  }
+  std::set<std::string> classes;
+  std::unordered_map< std::vector<bool>, std::vector<std::string>> matchLookup;
 };
+
 
 int main() {
   std::vector<Record> recs = {
@@ -81,7 +115,9 @@ int main() {
     }
   };
 
-  ExactBayesClassification ebc(recs);
+  ExactBayesClassification ebc;
+
+  ebc.Train(recs);
 
   std::vector<bool> query = {true, false, true, true};
 
