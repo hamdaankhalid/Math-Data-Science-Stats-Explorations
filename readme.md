@@ -6,4 +6,6 @@
 - Matrix Multiplication (Brute Force & Strassens)
 - Multi Armed Bandit Algorithm (Epsilon Greedy and Thompson Sampling based) Reinforcement Learning.
 - Least squares regression Algorithm from intuition
+- Exact Bayes Classification
+- Naive Bayes Classification
   

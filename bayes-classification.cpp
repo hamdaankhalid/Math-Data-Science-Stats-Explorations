@@ -143,13 +143,13 @@ class NaiveBayesClassification : public Classifier {
     double classificationProb = classificationProbabilites.at(classification);
 
     for (int i = 0; i < queryRec.size(); i++) {
-      double queryRecAndClassificationCount = 0;
+      double queryRecAndClassificationCount = 1;
       double classificationCount = 0;
-      double recQueryCatCount = 0;
+      double recQueryCatCount = 1;
 
       for (auto rec: records) {
 
-        if (rec.categoricalVariables.at(i) == queryRec.at(i)) {
+        if (rec.categoricalVariables.at(i)) {
           recQueryCatCount++;
         }
 
