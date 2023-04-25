@@ -8,4 +8,4 @@
 - Least squares regression Algorithm from intuition
 - Exact Bayes Classification
 - Naive Bayes Classification
-  
+- Decision Tree Classifier
