@@ -44,6 +44,36 @@ fn prime_factors(number: i32, mut collected_primes: Vec<i32>) -> Vec<i32> {
     };
 }
 
+// Let ck(n) be the number of integers between and inclusive with exactly square prime factors.
+fn ck(k: i32, n: i32)-> i32 {
+    (1..=n).filter(|num| {
+     let primes = prime_factors(*num, vec![]);
+    
+    let mut frequency_map: HashMap<i32, u32> = HashMap::new();
+    for &num in primes.iter() {
+        let count = frequency_map.entry(num).or_insert(0);
+        *count += 1;
+    }
+    
+    let square_primes: Vec<i32> = frequency_map.iter().filter(|(_, v)| {
+        let how_many_times_to_add = *v / 2;
+        how_many_times_to_add >= 2
+    }).map(|(k, _)| *k).collect();
+    
+//    println!("Square Primes {:?}", square_primes);
+
+    square_primes.len() == (k as usize) 
+    }).collect::<Vec<i32>>().len() as i32
+}
+
+fn ck_n_ratio(k: i32, n: i32) {
+    for i in 1..=n {
+        let ck_calc = ck(k, i) as f64;
+        let ratio: f64 = ck_calc / i as f64;
+        println!("C k->{} n->{} ck: {}; ratio: {}", k, i, ck_calc, ratio);
+    }
+}
+
 fn main() {
     // collect args iterator into a vector of strings
     let args: Vec<String> = env::args().collect();
@@ -61,21 +91,5 @@ fn main() {
         }
     };
     
-    let primes = prime_factors(number, vec![]);
-    
-    println!("primes {:?}", primes);
-
-    let mut frequency_map: HashMap<i32, u32> = HashMap::new();
-    for num in primes.iter().cloned() {
-        let count = frequency_map.entry(num).or_insert(0);
-        *count += 1;
-    }
-    
-    let square_primes: Vec<i32> = primes
-        .iter()
-        .cloned()
-        .filter(|&num| frequency_map[&num] == 2) // TODO: THIS ISNT WORKING AS EXPECTED
-        .collect();
-
-    println!("square primes {:?}", square_primes);
+    ck_n_ratio(2, number);
 }
