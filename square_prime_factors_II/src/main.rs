@@ -1,5 +1,5 @@
-use std::env;
 use std::collections::HashMap;
+use std::env;
 
 // Given a number return the prime factors for it.
 // Find the prime factors who's squares divide the target number
@@ -45,31 +45,50 @@ fn prime_factors(number: i32, mut collected_primes: Vec<i32>) -> Vec<i32> {
 }
 
 // Let ck(n) be the number of integers between and inclusive with exactly square prime factors.
-fn ck(k: i32, n: i32)-> i32 {
-    (1..=n).filter(|num| {
-     let primes = prime_factors(*num, vec![]);
-    
-    let mut frequency_map: HashMap<i32, u32> = HashMap::new();
-    for &num in primes.iter() {
-        let count = frequency_map.entry(num).or_insert(0);
-        *count += 1;
-    }
-    
-    let square_primes: Vec<i32> = frequency_map.iter().filter(|(_, v)| {
-        let how_many_times_to_add = *v / 2;
-        how_many_times_to_add >= 2
-    }).map(|(k, _)| *k).collect();
-    
-//    println!("Square Primes {:?}", square_primes);
+fn ck(k: i32, n: i32) -> i32 {
+    (1..=n)
+        .filter(|num| {
+            let primes = prime_factors(*num, vec![]);
 
-    square_primes.len() == (k as usize) 
-    }).collect::<Vec<i32>>().len() as i32
+            let mut frequency_map: HashMap<i32, u32> = HashMap::new();
+            for &num in primes.iter() {
+                let count = frequency_map.entry(num).or_insert(0);
+                *count += 1;
+            }
+
+            let square_primes: Vec<i32> = frequency_map
+                .iter()
+                .filter(|(_, v)| {
+                    **v >= 2
+                })
+                .map(|(k, _)| *k)
+                .collect();
+
+            square_primes.len() == (k as usize)
+        })
+        .collect::<Vec<i32>>()
+        .len() as i32
 }
 
 fn ck_n_ratio(k: i32, n: i32) {
+    let tolerance: f64 = 0.005;
+    let mut prev_ratio: Option<f64> = None;
+
     for i in 1..=n {
         let ck_calc = ck(k, i) as f64;
         let ratio: f64 = ck_calc / i as f64;
+        match prev_ratio {
+            Some(prev_ratio_value) => {
+                // break if prev ratio value and current ratio have not changed
+                if (ratio - prev_ratio_value).abs() < tolerance {
+                    println!("Ratio converged at: {} with k {}, and n {}", ratio, k, n);
+                    return;
+                }
+            }
+            None => {
+                prev_ratio = Some(ratio);
+            }
+        }
         println!("C k->{} n->{} ck: {}; ratio: {}", k, i, ck_calc, ratio);
     }
 }
@@ -90,6 +109,6 @@ fn main() {
             return;
         }
     };
-    
+
     ck_n_ratio(2, number);
 }
