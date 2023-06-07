@@ -10,13 +10,12 @@ void reverseMe(char str[], int len) {
 	// swap the opposites as you move inside.
 	int l = 0;
 
-	int limit = len/2;
+	int limit = (len - 1)/2;
 	
 	int r;
 
 	char temp;
-	while (l < limit) {
-		// can I somehow use SIMD here or something?
+	while (l <= limit) {
 		r = len - 1 - l;
 		temp = str[l];
 		str[l] = str[r];
@@ -28,9 +27,24 @@ void reverseMe(char str[], int len) {
 }
 
 int main() {
-	char test[] = "kak dela? Normalna";
-	
-	reverseMe(test, strlen(test));
+    char tests[5][2][10] = {
+        {"", ""},
+        {"k", "k"},
+        {"foo", "oof"},
+        {"atom", "mota"},
+    };
 
-	return 0;
+    for (int i = 0; i < 4; i++) {
+        char* test[2] = {tests[i][0], tests[i][1]};
+        char* given = test[0];
+        char* expect = test[1];
+
+        reverseMe(given, strlen(given));
+
+        if (strcmp(given, expect) != 0) {
+            printf("Failed Test: Expected %s got %s \n", expect, given);
+        }
+    }
+
+    return 0;
 }
