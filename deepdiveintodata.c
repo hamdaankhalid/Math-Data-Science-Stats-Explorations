@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 void printBinary(void* data, size_t size) {
@@ -13,10 +14,13 @@ void printBinary(void* data, size_t size) {
     printf("\n");
 }
 
+// Used to show struct layout in memory
 struct Node {
 	int value;
 	struct Node* next;
 };
+
+// writing my own version of Vector
 
 int main() {
 	
@@ -120,11 +124,15 @@ int main() {
 			"If we wanted to create a linked list we could create a node with an int that signifies a nodes value, and have a field that holds a pointer to another node in memory! \n"
 			"We can literally build our own data types, and write methods that interact with these types to create a higher layer of abstraction, how exciting! \n"
 			"Let's take a look into how these structs are stored in the memory first though. \n");
+	
+	struct Node linkedList = {12, NULL};
 
-	// how are types maintained?
-	// what does a hashmap look like
-	// what does a set look like
-	// what does a linked list look like
-	// what does a doubly linked list look like
+	printf("We have a linked list node struct with an int and a pointer. It takes up: %zu bytes in memory. This is made up of the %zu bytes from the int field, and the %zu bytes of the pointer to the next node field along with some padding for what is called memory alignment. \n", sizeof(linkedList), sizeof(linkedList.value), sizeof(linkedList.next));
+
+	printf("Similar to arrays, structs are also stored in contiguous sections of memory. Their type is only a concept that exists at compile time! Once your code is compiled into machine code, types do not exist. The compiler uses the types to generate correct machine code but nothing further. When you access the struct's fields in your code the compiler uses the knowledge of the sizes of the structs fields, along with pointer arithmetic for getting to the desired field. By understanding how structs are compiled and laid out in memory, we can be mindful of things like arranging writing structs that are suitable for memory alignment and save bytes in memory constrained environment. The fact that the type system is such a beautiful abstraction still absolutely blows my mind!\n");
+	
+	printf("Now that we know structs and how they look in memory we are ready to tackle harder data structures that use pointers and structs along with primitives to build beautiful abstractions. "
+			"In the next part we will use the primtive types,  arrays, structs, and functions to build and dive deep into LinkedList, Vector, and HashMaps\n");
+	
 	return 0;
 }
