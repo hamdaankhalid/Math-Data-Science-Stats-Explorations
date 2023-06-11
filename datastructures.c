@@ -1,55 +1,150 @@
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-struct ResizableArray {
-	void** data;
-	int capacity;
-	int occupied;
-	unsigned int sizeOfElement;
+struct DynamicArray {
+    void** data;
+    int capacity;
+    int occupied;
+    unsigned int sizeOfElement;
 };
 
-struct ResizableArray* newArray(unsigned int sizeOfElement) {
-	struct ResizableArray* arr = malloc(sizeof(struct ResizableArray));
-	if (!arr) {
-		printf("Failed to allocate memory while create the array\n");
-		return NULL;
-	}
-	arr->data = malloc(8 * sizeof(arr->sizeOfElement));
-	if (!arr->data) {
-		printf("Failed to allocate memory for internal array\n");
-		free(arr);
-		return NULL;
-	}
-	arr->sizeOfElement = sizeOfElement;
-	arr->capacity = 8;
-	arr->occupied = 0;
-	return arr;
+struct DynamicArray* newArray(unsigned int sizeOfElement) {
+    struct DynamicArray* arr = malloc(sizeof(struct DynamicArray));
+    if (!arr) {
+        printf("Failed to allocate memory while creating the array\n");
+        return NULL;
+    }
+
+    arr->sizeOfElement = sizeOfElement;
+    arr->occupied = 0;
+    arr->capacity = 8;
+    arr->data = malloc(arr->capacity * sizeof(void*));
+    if (!arr->data) {
+        printf("Failed to allocate memory for internal array\n");
+        free(arr);
+        return NULL;
+    }
+
+    return arr;
 }
 
-int addElement(struct ResizableArray* arr, void* element) {
-	if (arr->occupied == arr->capacity) {
-		// increase capacity by double
-		arr->data = realloc(arr->data, arr->capacity * sizeof(arr->sizeOfElement) * 2);
-		if (!arr->data) {
-			printf("Failed to resize the array\n");
-			return -1;
-		}
-		arr->capacity *= 2;
-	}
+int addElement(struct DynamicArray* arr, void* element) {
+    if (arr->occupied == arr->capacity) {
+        void** newData = realloc(arr->data, arr->capacity * 2 * sizeof(void*));
+        if (!newData) {
+            printf("Failed to resize the array\n");
+            return -1;
+        }
+        arr->data = newData;
+        arr->capacity *= 2;
+    }
+
+    arr->data[arr->occupied] = malloc(arr->sizeOfElement);
+    if (!arr->data[arr->occupied]) {
+        printf("Failed to allocate memory for element\n");
+        return -1;
+    }
+
+    memcpy(arr->data[arr->occupied], element, arr->sizeOfElement);
+
+    arr->occupied++;
+
+    return 0;
+}
+
+void freeElement(void* element) {
+    free(element);
+}
+
+void removeElement(struct DynamicArray* arr, int index) {
+    if (index < 0 || index >= arr->occupied) {
+        printf("Invalid index\n");
+        return;
+    }
+
+    freeElement(arr->data[index]);
+
+    // Move elements after the removed element
+    for (int i = index; i < arr->occupied - 1; i++) {
+        arr->data[i] = arr->data[i + 1];
+    }
+
+    arr->occupied--;
+
+    // Check if capacity needs to be reduced
+    if (arr->occupied <= arr->capacity / 4) {
+        void** newData = realloc(arr->data, (arr->capacity / 2) * sizeof(void*));
+        if (newData) {
+            arr->data = newData;
+            arr->capacity /= 2;
+        }
+    }
+}
+
+void printData(struct DynamicArray* arr, void (*printElement)(void*)) {
+    for (int i = 0; i < arr->occupied; i++) {
+        printf("Element %d: ", i);
+        printElement(arr->data[i]);
+    }
+}
+
+// print utils
+void printInt(void* element) {
+    int* numPtr = (int*)element;
+    printf("%d\n", *numPtr);
+}
+
+void printString(void* element) {
+    char* str = (char*)element;
+    printf("%s\n", str);
+}
+
+int main() {
+    struct DynamicArray* arr = newArray(sizeof(int));
+    if (!arr) {
+        return 1;
+    }
+
+    int num1 = 42;
+    int num2 = 78;
+    int num3 = 13;
+
+    addElement(arr, &num1);
+    addElement(arr, &num2);
+    addElement(arr, &num3);
+
+    printData(arr, printInt);
+
+    // Free memory
+    for (int i = 0; i < arr->occupied; i++) {
+        freeElement(arr->data[i]);
+    }
+    free(arr->data);
+    free(arr);
+
+	// Now with strings
+
+    char* str1 = "Hello";
+    char* str2 = "World";
 	
-	void* elementToSave = malloc(arr->sizeOfElement);
-	if (elementToSave) {
-		memcpy(elementToSave, element, arr->sizeOfElement);
-		arr->data[arr->occupied] = elementToSave; 
-		arr->occupied++;
-		return 0;
-	} else {
-		printf("Error allocating memory when saving to resizable array\n");
-		return -1;
-	}
-}
+    struct DynamicArray* strArr = newArray(strlen(str1) + 1);
+    if (!strArr) {
+        return 1;
+    }
 
-void removeElement(struct ResizableArray* arr) {
+    addElement(strArr, str1);
+    addElement(strArr, str2);
+
+    printData(strArr, printString);
+
+	// Free memory
+    for (int i = 0; i < strArr->occupied; i++) {
+        freeElement(strArr->data[i]);
+    }
+    free(strArr->data);
+    free(strArr);
+
+    return 0;
 }
 
