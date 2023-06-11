@@ -124,19 +124,30 @@ int main() {
     free(arr);
 
 	// Now with strings
-
+	
+	char* test[] = {"abc", "def" , "jkl", "mno", "pqr", "stu", "vwx", "yz1", "234",
+		"567", "890", "001", "002", "003", "004"};
     char* str1 = "Hello";
     char* str2 = "World";
 	
-    struct DynamicArray* strArr = newArray(strlen(str1) + 1);
+    struct DynamicArray* strArr = newArray(strlen(test[0]) + 1);
     if (!strArr) {
         return 1;
     }
-
-    addElement(strArr, str1);
-    addElement(strArr, str2);
+	
+	for (int i = 0; i < 15; i++) {
+		addElement(strArr, test[i]);
+	}
 
     printData(strArr, printString);
+	
+	// remove the 5th, 8th, 10th, 1st elements
+	int removals[5] = {2, 1, 4, 6, 10};
+	for (int i = 0; i < 5; i++) {
+		removeElement(strArr, removals[i]);
+	}
+
+	printData(strArr, printString);
 
 	// Free memory
     for (int i = 0; i < strArr->occupied; i++) {
