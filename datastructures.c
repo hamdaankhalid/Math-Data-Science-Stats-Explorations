@@ -53,9 +53,6 @@ int addElement(struct DynamicArray* arr, void* element) {
     return 0;
 }
 
-void freeElement(void* element) {
-    free(element);
-}
 
 void removeElement(struct DynamicArray* arr, int index) {
     if (index < 0 || index >= arr->occupied) {
@@ -63,7 +60,7 @@ void removeElement(struct DynamicArray* arr, int index) {
         return;
     }
 
-    freeElement(arr->data[index]);
+    free(arr->data[index]);
 
     // Move elements after the removed element
     for (int i = index; i < arr->occupied - 1; i++) {
@@ -118,7 +115,7 @@ int main() {
 
     // Free memory
     for (int i = 0; i < arr->occupied; i++) {
-        freeElement(arr->data[i]);
+        free(arr->data[i]);
     }
     free(arr->data);
     free(arr);
@@ -151,7 +148,7 @@ int main() {
 
 	// Free memory
     for (int i = 0; i < strArr->occupied; i++) {
-        freeElement(strArr->data[i]);
+        free(strArr->data[i]);
     }
     free(strArr->data);
     free(strArr);
