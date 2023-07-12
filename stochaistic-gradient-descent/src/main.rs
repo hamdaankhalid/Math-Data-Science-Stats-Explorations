@@ -164,7 +164,7 @@ fn train_linear_regression(
     target_idx: usize,
     learning_rate: f32,
     max_iterations: u32,
-) -> Result<LinearRegression, String> {
+) -> LinearRegression {
     let mut rand_gen = rand::thread_rng();
 
     let mut lr = LinearRegression {
@@ -225,7 +225,7 @@ fn train_linear_regression(
         current_iteration += 1
     }
 
-    Ok(lr)
+    lr
 }
 
 // Driver code
