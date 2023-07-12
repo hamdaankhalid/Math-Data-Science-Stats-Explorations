@@ -43,6 +43,8 @@ impl Dataframe {
         Ok(df)
     }
 
+    // returns 2 data frames with data copied into the two dataframes based on the given split
+    // ratio. This does not mutate the dataframe itself, which is why I heavily rely on cloning
     fn training_split(&self, training_ratio: f32) -> (Dataframe, Dataframe) {
         let mut rng = rand::thread_rng();
 
@@ -71,11 +73,15 @@ impl Dataframe {
         (training_df, validation_df)
     }
 
+    // Divide the data frame into small shuffled chunks of the original data held in the orignal
+    // data frame. This also uses cloning to not affect the existing data structure.
     fn get_shuffled_minibatches(&self, batch_size: usize) -> Vec<Dataframe> {
         let mut clone_and_shuffle = self.data.clone();
         clone_and_shuffle.shuffle(&mut rand::thread_rng());
 
-        clone_and_shuffle
+        let subset = clone_and_shuffle[0..3].to_vec();
+
+        subset
             .chunks(batch_size)
             .map(|chunk| Dataframe {
                 headers: self.headers.clone(),
@@ -86,6 +92,8 @@ impl Dataframe {
 
     /*
      * Extract the data into vector of independent variables and a vector of dependent variables
+     * Given the index of the target variable we pretty much extract that one column out into it's
+     * own vector, and return new vector of the subset of records that are the features
      * */
     fn feature_target_extraction(&self, target_index: usize) -> (Vec<Vec<f32>>, Vec<f32>) {
         let mut features: Vec<Vec<f32>> = Vec::new();
@@ -124,8 +132,10 @@ struct LinearRegression {
 }
 
 impl LinearRegression {
+    // encapsulates the logic for getting the dependent variable/target given the intercept and
+    // coefficients for a linear regression model
     fn predict(&self, independents: &Vec<f32>) -> f32 {
-        // dot product :)
+        // dot product :) on coefficients
         let coefficients_indindependents_sum: f32 = independents
             .iter()
             .zip(self.coefficients.clone())
@@ -144,19 +154,25 @@ fn calc_gradient(x: &Vec<f32>, y: f32, lr: &LinearRegression) -> (Vec<f32>, f32)
         predicted_value, lr
     );
 
+    let error = predicted_value - y;
+
+    println!("Calculated Error in current model: {}", error);
+
     let parameter_gradients = x
         .iter()
         .map(|x_i| {
-            // derivative of mean squared error with respect to each parameter
-            2.0 * (predicted_value - y) * x_i
+            // derivative of loss function of RSS wrt each parameter with no regard to linear or
+            // constant stuff
+            error * x_i
         })
         .collect();
 
-    let intercept_gradient = 2.0 * (predicted_value - y);
+    let derivative_wrt_intercept = error;
 
-    (parameter_gradients, intercept_gradient)
+    (parameter_gradients, derivative_wrt_intercept)
 }
 
+// Main SGD algorithm happens here
 fn train_linear_regression(
     df: &Dataframe,
     num_coefficients: u32,
@@ -164,7 +180,7 @@ fn train_linear_regression(
     target_idx: usize,
     learning_rate: f32,
     max_iterations: u32,
-) -> LinearRegression {
+) -> Result<LinearRegression, String> {
     let mut rand_gen = rand::thread_rng();
 
     let mut lr = LinearRegression {
@@ -172,18 +188,18 @@ fn train_linear_regression(
         coefficients: Vec::with_capacity(num_coefficients as usize),
     };
 
-    // random weights array
+    // random weights array initially
     lr.coefficients.extend((0..num_coefficients).map(|_| {
         let random: f32 = rand_gen.gen();
         random
     }));
 
-    println!("Initial random based model {:?}", lr);
+    println!("******************");
+    println!("Initial random weights based model {:?}", lr);
+    println!("******************");
 
-    let mut current_iteration = 0;
-
-    while current_iteration < max_iterations {
-        println!("EPOCH {} STARTED", current_iteration);
+    for current_iteration in 0..max_iterations {
+        println!("********** EPOCH {} STARTED ***********", current_iteration);
         df.get_shuffled_minibatches(batch_size)
             .iter()
             .for_each(|batch| {
@@ -192,10 +208,9 @@ fn train_linear_regression(
                 let (features, targets) = batch.feature_target_extraction(target_idx);
 
                 println!(
-                    "Dataframe Divided -> FEATURES: {:?}, TARGET {:?}",
+                    "Dataframe Divided Between Features and Target labels -> FEATURES: {:?}, TARGET {:?}",
                     features, targets
                 );
-                assert!(features.len() == targets.len());
 
                 // calculate the current gradient based on the loss function
                 features.iter().zip(targets).for_each(|(feature, target)| {
@@ -204,28 +219,32 @@ fn train_linear_regression(
 
                     assert!(gradient.len() == lr.coefficients.len());
 
-                    println!("Gradient: {:?}", gradient);
+                    println!("Calculated Gradient -> {:?}", gradient);
 
                     // update parameters based on gradient
                     lr.coefficients = lr
                         .coefficients
                         .iter()
                         .zip(gradient)
-                        .map(|(coefficient, derivative)| coefficient - learning_rate * derivative)
+                        .map(|(coefficient, derivative)| coefficient - (derivative * learning_rate))
                         .collect();
 
                     // update the intercept
-                    lr.intercept = lr.intercept - learning_rate * intercept_dervative;
+                    lr.intercept = lr.intercept - (intercept_dervative * learning_rate);
 
                     println!("Updated Model -> {:?}", lr);
                 });
             });
+
         println!("Model adjusted: {:?}", lr);
-        println!("EPOCH {} COMPLETED", current_iteration);
-        current_iteration += 1
+        println!("********* EPOCH {} COMPLETED **********", current_iteration);
+
+        if lr.intercept.is_nan() || lr.coefficients.iter().any(|x| x.is_nan()) {
+            return Err("Numbers went to NAN, early exiting".to_string());
+        }
     }
 
-    lr
+    Ok(lr)
 }
 
 // Driver code
@@ -235,7 +254,41 @@ fn main() {
 
     let (test_df, _) = df.training_split(1.0);
 
-    let linear_regression_model = train_linear_regression(&test_df, 2, 3, 2, 0.001, 10);
+    let linear_regression_model = train_linear_regression(&test_df, 1, 3, 1, 0.001, 100);
 
     println!("{:?}", linear_regression_model);
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::calc_gradient;
+    use crate::LinearRegression;
+
+    #[test]
+    fn test_linear_regression_predict() {
+        let zero_line = LinearRegression {
+            intercept: 0.0,
+            coefficients: vec![0.0],
+        };
+
+        let origin_to_one_line = LinearRegression {
+            intercept: 0.0,
+            coefficients: vec![1.0],
+        };
+
+        assert_eq!(0.0, zero_line.predict(&vec![1.2]));
+        assert_eq!(1.0, origin_to_one_line.predict(&vec![1.0]));
+    }
+
+    #[test]
+    fn test_calc_gradient() {
+        let origin_to_one_line = LinearRegression {
+            intercept: 0.0,
+            coefficients: vec![1.0],
+        };
+
+        let (gradient, intercept_derivative) = calc_gradient(&vec![5.0], 5.0, &origin_to_one_line);
+        assert_eq!(0.0, intercept_derivative);
+        assert_eq!(0.0, gradient[0]);
+    }
 }
