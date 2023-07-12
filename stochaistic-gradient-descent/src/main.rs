@@ -97,7 +97,6 @@ impl Dataframe {
             target.push(target_extracted);
         });
 
-        println!("FEATURES: {:?}, TARGET {:?}", features, target);
         (features, target)
     }
 }
@@ -125,25 +124,25 @@ struct LinearRegression {
 }
 
 impl LinearRegression {
-    fn predict(&self, independents: &Vec<f32>) -> Result<f32, String> {
-        if independents.len() != self.coefficients.len() {
-            return Err(
-                "independent vectors length does not match the number of coefficients".to_string(),
-            );
-        }
-
+    fn predict(&self, independents: &Vec<f32>) -> f32 {
+        // dot product :)
         let coefficients_indindependents_sum: f32 = independents
             .iter()
             .zip(self.coefficients.clone())
             .map(|(a, b)| a * b)
             .sum();
 
-        Ok(self.intercept + coefficients_indindependents_sum)
+        self.intercept + coefficients_indindependents_sum
     }
 }
 
 fn calc_gradient(x: &Vec<f32>, y: f32, lr: &LinearRegression) -> (Vec<f32>, f32) {
-    let predicted_value = lr.predict(x).unwrap();
+    let predicted_value = lr.predict(x);
+
+    println!(
+        "Predicted Value: {} with LinearRegression model {:?}",
+        predicted_value, lr
+    );
 
     let parameter_gradients = x
         .iter()
@@ -191,10 +190,19 @@ fn train_linear_regression(
                 println!("iterating over with minibatch {:?}", batch);
                 // split features and targets
                 let (features, targets) = batch.feature_target_extraction(target_idx);
+
+                println!(
+                    "Dataframe Divided -> FEATURES: {:?}, TARGET {:?}",
+                    features, targets
+                );
+                assert!(features.len() == targets.len());
+
                 // calculate the current gradient based on the loss function
                 features.iter().zip(targets).for_each(|(feature, target)| {
                     // compute gradient
                     let (gradient, intercept_dervative) = calc_gradient(feature, target, &lr);
+
+                    assert!(gradient.len() == lr.coefficients.len());
 
                     println!("Gradient: {:?}", gradient);
 
@@ -207,8 +215,9 @@ fn train_linear_regression(
                         .collect();
 
                     // update the intercept
-                    // dont let this go to inf
                     lr.intercept = lr.intercept - learning_rate * intercept_dervative;
+
+                    println!("Updated Model -> {:?}", lr);
                 });
             });
         println!("Model adjusted: {:?}", lr);
