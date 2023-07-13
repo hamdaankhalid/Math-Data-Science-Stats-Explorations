@@ -75,21 +75,15 @@ impl Dataframe {
 
     // Divide the data frame into small shuffled chunks of the original data held in the orignal
     // data frame. This also uses cloning to not affect the existing data structure.
-    fn get_shuffled_minibatches(&self, batch_size: usize) -> Vec<Dataframe> {
+    fn get_shuffled_minibatch(&self, batch_size: usize) -> Dataframe {
         let mut clone_and_shuffle = self.data.clone();
         clone_and_shuffle.shuffle(&mut rand::thread_rng());
 
-        let subset = clone_and_shuffle[0..3].to_vec();
-
-        subset
-            .chunks(batch_size)
-            .map(|chunk| Dataframe {
-                headers: self.headers.clone(),
-                data: chunk.to_vec(),
-            })
-            .collect()
+        Dataframe {
+            headers: self.headers.clone(),
+            data: clone_and_shuffle[0..batch_size].to_vec(),
+        }
     }
-
     /*
      * Extract the data into vector of independent variables and a vector of dependent variables
      * Given the index of the target variable we pretty much extract that one column out into it's
@@ -106,6 +100,37 @@ impl Dataframe {
         });
 
         (features, target)
+    }
+
+    fn normalize_column(&self, target_idx: usize) -> Dataframe {
+        // x_normalized = (x - min(x)) / (max(x) - min(x))
+        let min = self
+            .data
+            .iter()
+            .map(|r| r[target_idx])
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap();
+
+        let max = self
+            .data
+            .iter()
+            .map(|r| r[target_idx])
+            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap();
+
+        let mut new_data = self.data.clone();
+        println!(
+            "Normalizing Column {}, Min in Column: {}, Max in Column {}",
+            self.headers[target_idx], min, max
+        );
+        new_data.iter_mut().for_each(|val| {
+            val[target_idx] = (val[target_idx] - min) / (max - min);
+        });
+
+        Dataframe {
+            headers: self.headers.clone(),
+            data: new_data,
+        }
     }
 }
 
@@ -174,10 +199,10 @@ fn calc_gradient(x: &Vec<Vec<f32>>, y: &Vec<f32>, lr: &LinearRegression) -> (Vec
     }
 
     for j in 0..num_features {
-        gradient[j] *= 2.0 / num_examples;
+        gradient[j] /= num_examples;
     }
 
-    gradient_intercept *= 2.0 / num_examples;
+    gradient_intercept /= num_examples;
 
     (gradient, gradient_intercept)
 }
@@ -206,7 +231,7 @@ fn train_linear_regression(
 
     println!("##################");
     println!(
-        "Modle training loop starting with a maximum iteration set to {}",
+        "Model training loop starting with a maximum iteration set to {}",
         max_iterations
     );
     println!("Initial random weights based model {:?}", lr);
@@ -214,34 +239,34 @@ fn train_linear_regression(
 
     for current_iteration in 0..max_iterations {
         println!("********** EPOCH {} STARTED ***********", current_iteration);
-        df.get_shuffled_minibatches(batch_size)
-            .iter()
-            .for_each(|batch| {
-                println!("iterating over with minibatch {:?}", batch);
-                // split features and targets
-                let (features, targets) = batch.feature_target_extraction(target_idx);
-                
-                assert_eq!(features.len() , targets.len());
-                
-                println!(
-                    "Dataframe Divided Between Features and Target labels -> FEATURES: {:?}, TARGET {:?}",
-                    features, targets
-                );
 
-                let (gradient, intercept_dervative) = calc_gradient(&features, &targets, &lr);
+        let batch = df.get_shuffled_minibatch(batch_size);
 
-                println!("Calculated Gradient -> {:?}", gradient);
+        println!("iterating over with minibatch {:?}", batch);
+        // split features and targets
+        let (features, targets) = batch.feature_target_extraction(target_idx);
 
-               lr.coefficients
-                .iter_mut()
-                .zip(gradient.iter())
-                .for_each(|(coeff, grad)| {
-                    *coeff -= grad * learning_rate;
-                });
+        assert_eq!(features.len(), targets.len());
 
-            lr.intercept -= intercept_dervative * learning_rate;
-                println!("Updated Model -> {:?}", lr);
+        println!(
+            "Dataframe Divided Between Features and Target labels -> FEATURES: {:?}, TARGET {:?}",
+            features, targets
+        );
+
+        let (gradient, intercept_dervative) = calc_gradient(&features, &targets, &lr);
+
+        println!("Calculated Gradient -> {:?}", gradient);
+
+        lr.coefficients
+            .iter_mut()
+            .zip(gradient.iter())
+            .for_each(|(coeff, grad)| {
+                *coeff -= grad * learning_rate;
             });
+
+        lr.intercept -= intercept_dervative * learning_rate;
+
+        println!("Updated Model -> {:?}", lr);
 
         println!(
             "********** EPOCH {} SUMMARY ************",
@@ -263,13 +288,43 @@ fn train_linear_regression(
 // Driver code
 
 fn main() {
-    let df = Dataframe::read_from_csv("../data.csv").unwrap();
+    let mut df = Dataframe::read_from_csv("../data.csv").unwrap();
 
-    let (test_df, _) = df.training_split(1.0);
+    df = df.normalize_column(0);
 
-    let linear_regression_model = train_linear_regression(&test_df, 1, 5, 1, 0.001, 50);
+    let (test_df, validation_df) = df.training_split(0.90);
+
+    let linear_regression_model = train_linear_regression(&test_df, 1, 15, 1, 0.001, 1000).unwrap();
 
     println!("{:?}", linear_regression_model);
+
+    println!("--------- Perform Validation Testing ----------");
+
+    let mut sum_squared_residuasl = 0.0;
+    let mut tot_sum_of_squares = 0.0;
+
+    let (features, targets) = validation_df.feature_target_extraction(1);
+
+    let mean_target: f32 = targets.iter().sum::<f32>() / targets.len() as f32;
+
+    for i in 0..features.len() {
+        let model_prediction = linear_regression_model.predict(&features[i]);
+        let actual = targets[i];
+
+        sum_squared_residuasl += (actual - model_prediction).powi(2);
+        tot_sum_of_squares += (actual - mean_target).powi(2);
+
+        println!(
+            "Trained Model Predicted {} And Actual Was {}",
+            model_prediction, actual
+        );
+    }
+
+    println!("------------ Model Performance On Validation Set -----------------");
+
+    let r_squared = 1.0 - (sum_squared_residuasl / tot_sum_of_squares);
+
+    println!("R^2 Score: {}", r_squared);
 }
 
 #[cfg(test)]
