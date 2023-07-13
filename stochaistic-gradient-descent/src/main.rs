@@ -136,40 +136,50 @@ impl LinearRegression {
     // coefficients for a linear regression model
     fn predict(&self, independents: &Vec<f32>) -> f32 {
         // dot product :) on coefficients
-        let coefficients_indindependents_sum: f32 = independents
+        let coefficients_independents_sum: f32 = independents
             .iter()
-            .zip(self.coefficients.clone())
+            .zip(&self.coefficients)
             .map(|(a, b)| a * b)
             .sum();
 
-        self.intercept + coefficients_indindependents_sum
+        self.intercept + coefficients_independents_sum
     }
 }
 
-fn calc_gradient(x: &Vec<f32>, y: f32, lr: &LinearRegression) -> (Vec<f32>, f32) {
-    let predicted_value = lr.predict(x);
+// partial derivative of loss function of RSS wrt each parameter and with no regard to linear or constant stuff
+// partial derivative measures the rate of change of a function with multiple variables
+// when all variables are constant except one is changed
+fn calc_gradient(x: &Vec<Vec<f32>>, y: &Vec<f32>, lr: &LinearRegression) -> (Vec<f32>, f32) {
+    let num_examples = x.len() as f32;
+    let num_features = x[0].len();
 
-    println!(
-        "Predicted Value: {} with LinearRegression model {:?}",
-        predicted_value, lr
-    );
+    let mut gradient = vec![0.0; num_features];
+    let mut gradient_intercept = 0.0;
 
-    let error = predicted_value - y;
+    for i in 0..x.len() {
+        let prediction = lr.predict(&x[i]);
+        let actual = y[i];
+        let error = prediction - actual;
 
-    println!("Calculated Error in current model: {}", error);
+        println!(
+            "Predicted: {}, Actual: {}, Error: {}",
+            prediction, actual, error
+        );
 
-    let parameter_gradients = x
-        .iter()
-        .map(|x_i| {
-            // derivative of loss function of RSS wrt each parameter with no regard to linear or
-            // constant stuff
-            error * x_i
-        })
-        .collect();
+        for j in 0..num_features {
+            gradient[j] += error * x[i][j];
+        }
 
-    let derivative_wrt_intercept = error;
+        gradient_intercept += error;
+    }
 
-    (parameter_gradients, derivative_wrt_intercept)
+    for j in 0..num_features {
+        gradient[j] *= 2.0 / num_examples;
+    }
+
+    gradient_intercept *= 2.0 / num_examples;
+
+    (gradient, gradient_intercept)
 }
 
 // Main SGD algorithm happens here
@@ -184,19 +194,23 @@ fn train_linear_regression(
     let mut rand_gen = rand::thread_rng();
 
     let mut lr = LinearRegression {
-        intercept: rand_gen.gen(), // random starting point
+        intercept: rand_gen.gen_range(-0.5..0.5),
         coefficients: Vec::with_capacity(num_coefficients as usize),
     };
 
     // random weights array initially
     lr.coefficients.extend((0..num_coefficients).map(|_| {
-        let random: f32 = rand_gen.gen();
+        let random: f32 = rand_gen.gen_range(-0.5..0.5);
         random
     }));
 
-    println!("******************");
+    println!("##################");
+    println!(
+        "Modle training loop starting with a maximum iteration set to {}",
+        max_iterations
+    );
     println!("Initial random weights based model {:?}", lr);
-    println!("******************");
+    println!("##################");
 
     for current_iteration in 0..max_iterations {
         println!("********** EPOCH {} STARTED ***********", current_iteration);
@@ -206,36 +220,33 @@ fn train_linear_regression(
                 println!("iterating over with minibatch {:?}", batch);
                 // split features and targets
                 let (features, targets) = batch.feature_target_extraction(target_idx);
-
+                
+                assert_eq!(features.len() , targets.len());
+                
                 println!(
                     "Dataframe Divided Between Features and Target labels -> FEATURES: {:?}, TARGET {:?}",
                     features, targets
                 );
 
-                // calculate the current gradient based on the loss function
-                features.iter().zip(targets).for_each(|(feature, target)| {
-                    // compute gradient
-                    let (gradient, intercept_dervative) = calc_gradient(feature, target, &lr);
+                let (gradient, intercept_dervative) = calc_gradient(&features, &targets, &lr);
 
-                    assert!(gradient.len() == lr.coefficients.len());
+                println!("Calculated Gradient -> {:?}", gradient);
 
-                    println!("Calculated Gradient -> {:?}", gradient);
-
-                    // update parameters based on gradient
-                    lr.coefficients = lr
-                        .coefficients
-                        .iter()
-                        .zip(gradient)
-                        .map(|(coefficient, derivative)| coefficient - (derivative * learning_rate))
-                        .collect();
-
-                    // update the intercept
-                    lr.intercept = lr.intercept - (intercept_dervative * learning_rate);
-
-                    println!("Updated Model -> {:?}", lr);
+               lr.coefficients
+                .iter_mut()
+                .zip(gradient.iter())
+                .for_each(|(coeff, grad)| {
+                    *coeff -= grad * learning_rate;
                 });
+
+            lr.intercept -= intercept_dervative * learning_rate;
+                println!("Updated Model -> {:?}", lr);
             });
 
+        println!(
+            "********** EPOCH {} SUMMARY ************",
+            current_iteration
+        );
         println!("Model adjusted: {:?}", lr);
         println!("********* EPOCH {} COMPLETED **********", current_iteration);
 
@@ -243,6 +254,8 @@ fn train_linear_regression(
             return Err("Numbers went to NAN, early exiting".to_string());
         }
     }
+
+    println!("------ Model Training Completed --------");
 
     Ok(lr)
 }
@@ -254,14 +267,13 @@ fn main() {
 
     let (test_df, _) = df.training_split(1.0);
 
-    let linear_regression_model = train_linear_regression(&test_df, 1, 3, 1, 0.001, 100);
+    let linear_regression_model = train_linear_regression(&test_df, 1, 5, 1, 0.001, 50);
 
     println!("{:?}", linear_regression_model);
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::calc_gradient;
     use crate::LinearRegression;
 
     #[test]
@@ -271,24 +283,20 @@ mod tests {
             coefficients: vec![0.0],
         };
 
-        let origin_to_one_line = LinearRegression {
-            intercept: 0.0,
-            coefficients: vec![1.0],
-        };
-
         assert_eq!(0.0, zero_line.predict(&vec![1.2]));
-        assert_eq!(1.0, origin_to_one_line.predict(&vec![1.0]));
-    }
 
-    #[test]
-    fn test_calc_gradient() {
         let origin_to_one_line = LinearRegression {
             intercept: 0.0,
             coefficients: vec![1.0],
         };
 
-        let (gradient, intercept_derivative) = calc_gradient(&vec![5.0], 5.0, &origin_to_one_line);
-        assert_eq!(0.0, intercept_derivative);
-        assert_eq!(0.0, gradient[0]);
+        assert_eq!(1.0, origin_to_one_line.predict(&vec![1.0]));
+
+        let example_line = LinearRegression {
+            intercept: 0.72001684,
+            coefficients: vec![0.47640133],
+        };
+
+        assert_eq!(952.0935, example_line.predict(&vec![1997.0]));
     }
 }
