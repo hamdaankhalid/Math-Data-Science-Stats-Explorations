@@ -1,6 +1,7 @@
 use csv::Reader;
 use rand::seq::SliceRandom;
 use rand::Rng;
+use std::env;
 use std::error::Error;
 use std::fs::File;
 use std::num::ParseFloatError;
@@ -288,19 +289,46 @@ fn train_linear_regression(
 // Driver code
 
 fn main() {
-    let mut df = Dataframe::read_from_csv("../data.csv").unwrap();
+    let args: Vec<String> = env::args().collect();
 
-    df = df.normalize_column(0);
+    // binary file_path train_split_ratio num_coefficients target_idx
+    if args.len() < 5 {
+        println!(
+            "Please Follow The Usage -> {} <file_path> <training_split_ratio> <num_features> <target_idx>",
+            args[0]
+        );
+        return;
+    }
 
-    let (test_df, validation_df) = df.training_split(0.90);
+    let file_path = &args[1];
 
-    let linear_regression_model = train_linear_regression(&test_df, 1, 15, 1, 0.001, 1000).unwrap();
+    let training_split_ratio: f32 = args[2].parse().unwrap();
+
+    let num_features: u32 = args[3].parse().unwrap();
+
+    let target_idx: u32 = args[4].parse().unwrap();
+
+    let mut df = Dataframe::read_from_csv(file_path).unwrap();
+
+    // normalize all columns except the target_idx
+    for idx in 0..num_features + 1 {
+        if idx == target_idx {
+            continue;
+        }
+        df = df.normalize_column(idx as usize);
+    }
+
+    let (test_df, validation_df) = df.training_split(training_split_ratio);
+
+    let linear_regression_model =
+        train_linear_regression(&test_df, num_features, 15, target_idx as usize, 0.01, 10000)
+            .unwrap();
 
     println!("{:?}", linear_regression_model);
 
     println!("--------- Perform Validation Testing ----------");
 
-    let mut sum_squared_residuasl = 0.0;
+    let mut sum_squared_residuals = 0.0;
     let mut tot_sum_of_squares = 0.0;
 
     let (features, targets) = validation_df.feature_target_extraction(1);
@@ -311,7 +339,7 @@ fn main() {
         let model_prediction = linear_regression_model.predict(&features[i]);
         let actual = targets[i];
 
-        sum_squared_residuasl += (actual - model_prediction).powi(2);
+        sum_squared_residuals += (actual - model_prediction).powi(2);
         tot_sum_of_squares += (actual - mean_target).powi(2);
 
         println!(
@@ -322,7 +350,7 @@ fn main() {
 
     println!("------------ Model Performance On Validation Set -----------------");
 
-    let r_squared = 1.0 - (sum_squared_residuasl / tot_sum_of_squares);
+    let r_squared = 1.0 - (sum_squared_residuals / tot_sum_of_squares);
 
     println!("R^2 Score: {}", r_squared);
 }
