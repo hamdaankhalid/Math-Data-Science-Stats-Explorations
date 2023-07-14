@@ -217,16 +217,18 @@ fn train_linear_regression(
     learning_rate: f32,
     max_iterations: u32,
 ) -> Result<LinearRegression, String> {
+    let initial_random_range = 1.0;
+
     let mut rand_gen = rand::thread_rng();
 
     let mut lr = LinearRegression {
-        intercept: rand_gen.gen_range(-0.5..0.5),
+        intercept: rand_gen.gen_range(-initial_random_range..initial_random_range),
         coefficients: Vec::with_capacity(num_coefficients as usize),
     };
 
     // random weights array initially
     lr.coefficients.extend((0..num_coefficients).map(|_| {
-        let random: f32 = rand_gen.gen_range(-0.5..0.5);
+        let random: f32 = rand_gen.gen_range(-initial_random_range..initial_random_range);
         random
     }));
 

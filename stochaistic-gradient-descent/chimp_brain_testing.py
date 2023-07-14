@@ -15,6 +15,11 @@ with open(filename, 'r') as file:
         x.append(float(row[0]))
         y.append(float(row[1]))
 
+# scale the freaking X axis :)
+min_x = min(x)
+max_x = max(x)
+x = [(data - min_x) / (max_x - min_x) for data in x]
+
 # Fit a linear regression model
 coefficients = np.polyfit(x, y, 1)
 intercept, slope = coefficients
@@ -23,7 +28,7 @@ print(f"y = {slope} * x + {intercept}")
 
 # Generate points for the regression line
 regression_line_x = np.linspace(min(x), max(x), 100)
-regression_line_y = slope * regression_line_x + intercept
+regression_line_y = np.polyval(coefficients, regression_line_x)
 
 rust_regression_line_y =  2.9764156 +  regression_line_x * 0.6901345
 
