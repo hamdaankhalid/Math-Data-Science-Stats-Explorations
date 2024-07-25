@@ -1,6 +1,17 @@
 #include <vector>
 #include <iostream>
 
+// utils
+void pretty_print_arr(std::vector<int>& arr)
+{
+    std::cout << "*****Pretty Print Start*****" << std::endl;
+    for (int element : arr)
+    {
+        std::cout << element << std::endl;
+    }
+    std::cout << "*****Pretty Print End*****" << std::endl;
+}
+
 struct SortingMetrics
 {
     int comparisons;
@@ -84,7 +95,6 @@ void SortingAlgorithm<T>::selection_sort(std::vector<T>& arr, SortingMetrics& me
     }
 }
 
-// TODO: Fix this shitty code
 /// @brief Use merge sort algorithm to sort given arr
 /// @tparam T Type that  supports comparison
 /// @param arr array to sort
@@ -108,56 +118,96 @@ std::pair<int, int> SortingAlgorithm<T>::merge_sort(std::vector<T> &arr, Sorting
     size_t left_sorted_subarr_ctr = left_sorted.first;
     size_t right_sorted_subarr_ctr = right_sorted.first;
 
-    // ew heap memory allocation
-    std::vector<T> temp;
-    while (left_sorted_subarr_ctr < left_sorted.second || right_sorted_subarr_ctr < right_sorted.second)
+    // fuck heap memory allocation, i will die on the hill that I shouldn't need to allocate a fucking vector
+    merge(arr, left_sorted, right_sorted, metrics);
+
+    return { left_boundary, right_boundary };
+}
+
+const inline bool right_ended(int right_ctr, std::pair<int, int>& sorted_right_subarr) 
+{
+    return right_ctr >= sorted_right_subarr.second;
+}
+
+const inline std::pair<bool, int> left_ended(int left_ctr, std::pair<int, int>& sorted_left_subarr, int temp_redirection)
+{
+    if (temp_redirection != -1)
+        return { false, temp_redirection }; 
+
+    return { left_ctr >= sorted_left_subarr.second , -1 };
+}
+
+template<typename T>
+const void print_sub_arr_(std::vector<T>& arr, std::pair<int, int>& subarr)
+{
+    for (size_t i = subarr.first; i < subarr.second; i++)
+        std::cout << arr[i] << ", ";
+
+    std::cout << "\n";
+}
+
+template<typename T>
+void merge(std::vector<T>& arr, std::pair<int, int>& sorted_left_subarr, std::pair<int, int>& sorted_right_subarr, SortingMetrics& metrics)
+{
+    int left_ctr = sorted_left_subarr.first;
+    int right_ctr = sorted_right_subarr.first;
+    int temp_redirection = -1;
+
+    // inlined function call for loop termination
+    std::pair<bool, int> has_left_ended_res = left_ended(left_ctr, sorted_left_subarr, temp_redirection);
+    bool has_right_ended = right_ended(right_ctr, sorted_right_subarr);
+
+    // we only care when both counters are in their bound, this is because if the left or the right end
+    // then due to the contiguous nature of the underlying array, they will already be in sorted sequence
+    while (!has_left_ended_res.first && !has_right_ended)
     {
-        if (left_sorted_subarr_ctr != SIZE_MAX && right_sorted_subarr_ctr != SIZE_MAX)
+        int redirection_layer = has_left_ended_res.second;
+        bool use_redirection_layer = redirection_layer != -1;
+
+        // if we are working with indirection layer then this is the logical replacement of the left_ctr
+        if (use_redirection_layer)
         {
-            if (arr[left_sorted_subarr_ctr] < arr[right_sorted_subarr_ctr])
+            metrics.comparisons++;
+            if (redirection_layer > arr[right_ctr])
             {
-                temp.push_back(arr[left_sorted_subarr_ctr]);
-                left_sorted_subarr_ctr++;
+                metrics.swaps++;
+                arr[left_ctr] = arr[right_ctr];
+                right_ctr++;
             }
             else
             {
-                temp.push_back(arr[right_sorted_subarr_ctr]);
-                right_sorted_subarr_ctr++;
+                metrics.swaps++;
+                arr[left_ctr] = redirection_layer;
+                temp_redirection = -1; // we dont need to do first link pattern anymore
+                // after this we should go back to using the left_ctr on the next iteration for tracking the left subarr
+            }
+        } 
+        else 
+        {
+            // if we are not using indirection layer, then we are working with the left_ctr, and right_ctr
+            // we only need to make swaps when the value at left_ctr is greater than the value at the right_ctr
+            // otherwise they are already in appropriate order
+            metrics.comparisons++;
+            if (arr[left_ctr] > arr[right_ctr])
+            {
+                metrics.swaps++;
+                temp_redirection = arr[left_ctr];
+                arr[left_ctr] = arr[right_ctr];
+                right_ctr++;
             }
         }
-        else if (left_sorted_subarr_ctr != SIZE_MAX && right_sorted_subarr_ctr == SIZE_MAX)
-        {
-            // always choose left
-            temp.push_back(arr[left_sorted_subarr_ctr]);
-            left_sorted_subarr_ctr++;
-        }
-        else if (right_sorted_subarr_ctr != SIZE_MAX && left_sorted_subarr_ctr == SIZE_MAX)
-        {
-            // always choose right 
-            temp.push_back(arr[right_sorted_subarr_ctr]);
-            right_sorted_subarr_ctr++;
-        }
+        left_ctr++;
 
-        if (right_sorted_subarr_ctr != SIZE_MAX && right_sorted_subarr_ctr > left_sorted.second)
-        {
-            right_sorted_subarr_ctr = SIZE_MAX;
-        }
-
-        if (left_sorted_subarr_ctr != SIZE_MAX && left_sorted_subarr_ctr > right_sorted.second)
-        {
-            left_sorted_subarr_ctr = SIZE_MAX;
-        }
-        metrics.comparisons++;
+        has_left_ended_res = left_ended(left_ctr, sorted_left_subarr, temp_redirection);
+        has_right_ended = right_ended(right_ctr, sorted_right_subarr);
     }
-
-    // now take the heap memory allocation and insert it into the subarray that left and right guys come together
-    for (int i = 0; i < temp.size(); i ++)
+    // if at the end we have temp_redirection as no -1, we have one last fuckery to do
+    if (!has_left_ended_res.first && has_left_ended_res.second != -1)
     {
         metrics.swaps++;
-        arr[left_boundary + i] = temp[i];
+        arr[right_ctr-1] = temp_redirection;
+        temp_redirection = -1;
     }
-
-    return { left_boundary, right_boundary };
 }
 
 // Quick Sort
@@ -170,23 +220,12 @@ std::pair<int, int> SortingAlgorithm<T>::merge_sort(std::vector<T> &arr, Sorting
 
 // Bucket Sort
 
-// utils
-void pretty_print_arr(std::vector<int>& arr)
-{
-    std::cout << "*****Pretty Print Start*****" << std::endl;
-    for (int element : arr)
-    {
-        std::cout << element << std::endl;
-    }
-    std::cout << "*****Pretty Print End*****" << std::endl;
-}
-
 int main(int argc, char const *argv[])
 {
     SortingAlgorithm<int> int_sorter;
 
     // Show performance of each sorting algorithm, counting comparisons and swaps
-    std::vector<int> arr { 5, 6, 7, 3, 4, 9, 10, 23, 43, 23 };
+    std::vector<int> arr { 5, -15, -99, 6, 7, 3, 1738, 4, 9, 10, 23, 43, 23 };
 
     pretty_print_arr(arr);
 
